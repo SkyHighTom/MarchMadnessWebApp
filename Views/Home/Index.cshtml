@@ -1,0 +1,30 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+}
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<button onClick='LogOut()'>Logout</button>
+@section Scripts
+{
+    <script type="text/javascript">
+        function LogOut() {
+
+            $.ajax({
+                type: 'POST',
+                url: '@Url.Action("LogOut", "Home")',
+                dataType: 'json',
+                success: function () {
+                    location.reload();
+                },
+                error: function (ex) {
+                    var r = jQuery.parseJSON(response.responseText);
+                    alert("Message: " + r.Message);
+                    alert("StackTrace: " + r.StackTrace);
+                    alert("ExceptionType: " + r.ExceptionType);
+                    location.reload();
+                }
+            });
+            return false;
+        }
+    </script>
+}

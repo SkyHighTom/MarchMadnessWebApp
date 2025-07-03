@@ -1,0 +1,80 @@
+﻿@{
+    ViewData["Title"] = "Results";
+}
+
+<h2>Matches</h2>
+
+<div class="col-md-12">
+    <table id="tblResults" class="table table-striped">
+        <thead>
+            <tr>
+                <th align="left" class="productth">Round of</th>
+                <th align="left" class="productth">Team 1</th>
+                <th align="left" class="productth">Score</th>
+                <th align="left" class="productth">Team 2</th>
+                <th align="left" class="productth">Winner</th>
+            </tr>
+        </thead>
+    </table>
+</div>
+
+@section Scripts
+{
+    <script type="text/javascript">
+
+        function PopulateTable(tbl, matches) {
+            var newBody = document.createElement("tbody");
+
+            $.each(matches, function (i, item) {
+                var tr = document.createElement("tr");
+
+                var td = document.createElement("td");
+                td.appendChild(document.createTextNode(item.round));
+                tr.appendChild(td);
+
+                var td = document.createElement("td");
+                td.appendChild(document.createTextNode(item.team1+"("+item.seed1+")"));
+                tr.appendChild(td);
+
+                var td = document.createElement("td");
+                td.appendChild(document.createTextNode(item.team1Score+"-"+item.team2Score));
+                tr.appendChild(td);
+
+                var td = document.createElement("td");
+                td.appendChild(document.createTextNode(item.team2+"("+item.seed2+")"));
+                tr.appendChild(td);
+
+                var td = document.createElement("td");
+                td.appendChild(document.createTextNode(item.winner));
+                tr.appendChild(td);
+
+                newBody.appendChild(tr);
+            });
+
+            tbl.appendChild(newBody);
+        }
+
+        $(function () {
+            LoadData();
+        });
+
+        function LoadData() {
+            var tbl = document.getElementById("tblResults");
+            $.ajax({
+                type: 'POST',
+                url: '@Url.Action("AllResults", "Home")',
+                dataType: 'json',
+                success: function (data, status) {
+                    PopulateTable(tblResults, data);
+                },
+                error: function (ex) {
+                    var r = jQuery.parseJSON(ex.responseText);
+                    alert("Message: " + r.Message);
+                    alert("StackTrace: " + r.StackTrace);
+                    alert("ExceptionType: " + r.ExceptionType);
+                }
+            });
+            return false;
+        }
+    </script>
+}

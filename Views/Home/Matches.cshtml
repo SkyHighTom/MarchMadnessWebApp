@@ -1,0 +1,194 @@
+﻿@{
+    ViewData["Title"] = "Matches";
+}
+
+<h2>Matches</h2>
+
+<button id="submitPredictions" class="btn btn-primary">Submit Predictions</button>
+
+<div class="col-md-12">
+    <table id="tblMatches" class="table table-striped">
+        <thead>
+            <tr>
+                <th>Round</th>
+                <th>Team 1</th>
+                <th>Team 2</th>
+                <th>Your Prediction</th>
+            </tr>
+        </thead>
+    </table>
+</div>
+<br />
+<br />
+
+<button onClick='LogOut()'>Logout</button>
+
+@section Scripts
+{
+    <script type="text/javascript">
+        var predictions = [];
+
+        function PopulateTable(tbl, matches) {
+            var newBody = document.createElement("tbody");
+
+            $.each(matches, function (i, item) {
+                var tr = document.createElement("tr");
+
+                // Round
+                var td = document.createElement("td");
+                td.textContent = item.round;
+                tr.appendChild(td);
+
+                // Team 1
+                td = document.createElement("td");
+                td.textContent = `${item.team1} (${item.seed1})`;
+                tr.appendChild(td);
+
+                // Team 2
+                td = document.createElement("td");
+                td.textContent = `${item.team2} (${item.seed2})`;
+                tr.appendChild(td);
+
+                // Prediction Buttons
+                td = document.createElement("td");
+                if(item.prediction == "")
+                {
+                    var button1 = document.createElement("button");
+                    button1.textContent = `Pick ${item.team1}`;
+                    button1.className = "btn btn-success me-2";
+                    button1.dataset.round = item.round;
+                    button1.dataset.team1 = item.team1;
+                    button1.dataset.team2 = item.team2;
+                    button1.dataset.team = item.team1;
+
+                    var button2 = document.createElement("button");
+                    button2.textContent = `Pick ${item.team2}`;
+                    button2.className = "btn btn-danger";
+                    button2.dataset.round = item.round;
+                    button2.dataset.team1 = item.team1;
+                    button2.dataset.team2 = item.team2;
+                    button2.dataset.team = item.team2;
+
+                    // Add click handlers
+                    button1.addEventListener('click', function () {
+                        PickWinner(item.round, item.team1, item.team2, item.team1);
+                    });
+                    button2.addEventListener('click', function () {
+                        PickWinner(item.round, item.team1, item.team2, item.team2);
+                    });
+
+                    td.appendChild(button1);
+                    td.appendChild(button2);
+                }
+                else
+                {
+                    td.appendChild(document.createTextNode(item.prediction));
+                    PickWinner(item.round, item.team1, item.team2, item.prediction);
+                }
+                tr.appendChild(td);
+
+                newBody.appendChild(tr);
+            });
+
+            tbl.appendChild(newBody);
+        }
+
+        function PickWinner(round, team1, team2, winner) {
+            // Update predictions array
+            const index = predictions.findIndex(p => 
+                p.round === round && p.team1 === team1 && p.team2 === team2);
+            
+            if (index === -1) {
+                predictions.push({ round, team1, team2, winner });
+            } else {
+                predictions[index].winner = winner;
+            }
+
+            // Toggle button styles
+            const buttons = document.querySelectorAll(
+                `button[data-round="${round}"][data-team1="${team1}"][data-team2="${team2}"]`
+            );
+            buttons.forEach(btn => {
+                if (btn.dataset.team === winner) {
+                    btn.classList.remove('btn-danger');
+                    btn.classList.add('btn-success');
+                } else {
+                    btn.classList.remove('btn-success');
+                    btn.classList.add('btn-danger');
+                }
+            });
+        }
+        function LogOut() {
+
+            $.ajax({
+                type: 'POST',
+                url: '@Url.Action("LogOut", "Home")',
+                dataType: 'json',
+                success: function () {
+                    window.location.href = '@Url.Action("Login", "Home")';
+                },
+                error: function (ex) {
+                    var r = jQuery.parseJSON(response.responseText);
+                    alert("Message: " + r.Message);
+                    alert("StackTrace: " + r.StackTrace);
+                    alert("ExceptionType: " + r.ExceptionType);
+                    window.location.href = '@Url.Action("Login", "Home")';
+                }
+            });
+            return false;
+        }
+        $(function () {
+            // Load matches and initialize predictions
+            function LoadData() {
+                $.ajax({
+                    type: 'POST',
+                    url: '@Url.Action("AllMatches", "Home")',
+                    dataType: 'json',
+                    success: function (data) {
+                        //alert(JSON.stringify(data));
+                        const tbl = document.getElementById("tblMatches");
+                        tbl.querySelector("tbody")?.remove(); // Clear existing rows
+                        PopulateTable(tbl, data);
+
+                        // Initialize default predictions
+                        data.forEach(item => {
+                            if (!predictions.some(p => 
+                                p.round === item.round && 
+                                p.team1 === item.team1 && 
+                                p.team2 === item.team2)) {
+                                predictions.push({
+                                    round: item.round,
+                                    team1: item.team1,
+                                    team2: item.team2,
+                                    winner: item.team1 // Default to team1
+                                });
+                            }
+                        });
+                    },
+                    error: function (ex) {
+                        alert("Error loading matches.");
+                    }
+                });
+            }
+
+            // Submit predictions
+            $('#submitPredictions').click(function () {
+                $.ajax({
+                    type: 'POST',
+                    url: '@Url.Action("MakePrediction", "Home")',
+                    dataType: 'json',
+                    contentType: 'application/json',
+                    data: JSON.stringify({predictions: predictions}),
+                    success: function (response) {
+                        alert(response.success ? 'Success!' : 'Error');
+                    },
+                    error: function () {
+                        alert('Error submitting predictions.');
+                    }
+                });
+            });
+
+            LoadData(); // Initial load
+        });
+    </script>
+}
